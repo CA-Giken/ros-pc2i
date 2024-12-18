@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #mypy: ignore-errors
 
-from ..script.pc2i import STLRenderer, CameraController, render_stl_to_image
+from ros_pc2i.pc2i import STLRenderer, CameraController, render_stl_to_image
 import unittest
 import os
 import numpy as np
