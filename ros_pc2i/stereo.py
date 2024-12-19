@@ -1,7 +1,6 @@
 # mypy: ignore-errors
 
 from pathlib import Path
-import glm
 import numpy as np
 import yaml
 from pyrr import Vector3, Matrix44
@@ -11,6 +10,7 @@ from ros_pc2i.base.renderer import Renderer
 from ros_pc2i.base.camera import Camera
 from ros_pc2i.base.scene import Scene
 from ros_pc2i.materials.metal import Metal
+from ros_pc2i.meshes.sphere import Sphere
 
 class StereoSystem:
     def __init__(self, left_camera: Camera, right_camera: Camera):
@@ -74,11 +74,15 @@ if __name__ == "__main__":
     # STLファイルの読み込み
     mesh_path = Path(__file__).parent.parent / "data" / "hole.stl"
     mesh = load_stl(renderer.ctx, mesh_path)
-    mesh.transform.position = Vector3([0, 0, 1000])
-    mesh.transform.rotation = Vector3([np.pi/4, np.pi/4, np.pi/4]) #45度回転
+    mesh.transform.position = Vector3([0, 0, 200])
+
+    # 球体メッシュを作成
+    # mesh = Sphere(renderer.ctx, radius=100)
+    # mesh.transform.position = Vector3([0, 0, 800])
+    mesh.transform.rotation = Vector3([np.pi/8, 0, np.pi/4]) #45度回転
     mesh.material = Metal()
     scene.add_mesh(mesh)
-    
+
     # カメラパラメータの設定
     baseline = 50
     left_cam = Camera(fx=800, fy=600, cx=0, cy=0)

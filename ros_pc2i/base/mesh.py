@@ -16,31 +16,28 @@ class Mesh:
       self,
       ctx: moderngl.Context,
       vertices: NDArray,
-      indices: NDArray,
       normals: NDArray,
       name: str = "unnamed"
     ):
         self.ctx = ctx
         self.name = name
-        
+        self.vertices = vertices
+        self.normals = normals
         # 頂点バッファの作成
-        self.vbo = self.ctx.buffer(vertices.astype('f4').tobytes())
-        self.ibo = self.ctx.buffer(indices.tobytes())
-        self.nbo = self.ctx.buffer(normals.astype('f4').tobytes())
-        self.index_count = len(indices)
-        
         self.vao = None
         self.transform = Transform()
         self.material = Material()
         
     def update_vao(self, program: moderngl.Program):
+        vertex_buffer = self.ctx.buffer(self.vertices.tobytes())
+        normal_buffer = self.ctx.buffer(self.normals.tobytes())
+        
         self.vao = self.ctx.vertex_array(
             program,
             [
-                (self.vbo, '3f', 'in_position'),
-                (self.nbo, '3f', 'in_normal'),
-            ],
-            self.ibo,
+                (vertex_buffer, '3f', 'in_position'),
+                (normal_buffer, '3f', 'in_normal')
+            ]
         )
     
     def render(self, program: moderngl.Program):
@@ -63,22 +60,25 @@ def load_stl(
     """
     vertices = []
     normals = []
-    
-    with open(filename, 'rb') as f:
-        f.seek(80)
-        num_triangles = struct.unpack('I', f.read(4))[0]
-        
-        for _ in range(num_triangles):
-            nx, ny, nz = struct.unpack('fff', f.read(12))
-            for _ in range(3):
-                x, y, z = struct.unpack('fff', f.read(12))
-                vertices.extend([x, y, z])
-                normals.extend([nx, ny, nz])
-            f.seek(2, 1)
-            
-    vertices = np.array(vertices, dtype='f4')
-    normals = np.array(normals, dtype='f4')
 
-    mesh = Mesh(ctx=ctx, vertices=vertices, indices=np.arange(len(vertices)//3), normals=normals)
-    
+    with open(filename, 'rb') as f:
+        f.seek(80) # スキップヘッダー
+        num_triangles = struct.unpack('I', f.read(4))[0]
+
+        for _ in range(num_triangles):
+            data = struct.unpack('f' * 12 + 'H', f.read(50))
+            normal = data[0:3]
+            v1 = data[3:6]
+            v2 = data[6:9]
+            v3 = data[9:12]
+
+            vertices.extend([v1, v2, v3])
+            normals.extend([normal] * 3)
+
+    mesh = Mesh(
+        ctx=ctx,
+        vertices=np.array(vertices, dtype='f4'),
+        normals=np.array(normals, dtype='f4')
+    )
+
     return mesh

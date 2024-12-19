@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 import glfw
 import moderngl as mgl
+from pyrr import Matrix44
 from .scene import Scene
 from .camera import Camera
 
@@ -70,18 +71,13 @@ class Renderer:
         self.fbo.use()
         self.ctx.clear(0.0, 0.0, 0.0)
 
-        # ビュー行列の作成
-        # Z軸方向を見るようにカメラを設定
-        view = np.eye(4)
-        view[:3, :3] = camera.R.T
-        view[:3, 3] = -camera.R.T @ camera.t.flatten()
         # MVP (Model-View-Projection) 行列の計算
+        view = camera._view_matrix
         projection = camera.compute_projection_matrix(self.width, self.height)
-        mvp = projection @ view
 
-        self.prog['mvp'].write(mvp.astype('f4').tobytes())
+        self.prog['view'].write(view.astype('f4').tobytes())
+        self.prog['projection'].write(projection.astype('f4').tobytes())
         self.prog['light_position'].write(np.array(scene.light_position, dtype='f4').tobytes())
-        self.prog['ambient_light'].write(np.array(scene.ambient_light, dtype='f4').tobytes())
 
         # メッシュの描画
         for mesh_name in scene.meshes.keys():
@@ -89,8 +85,8 @@ class Renderer:
             if mesh is None:
                 continue
 
-            model_matrix = mesh.transform.get_model_matrix()
-            self.prog["model_matrix"].write(model_matrix.astype('f4').tobytes())
+            model = mesh.transform.get_model_matrix()
+            self.prog["model"].write(model.astype('f4').tobytes())
             self.prog['camera_position'].write(camera.t[:, 0].astype('f4').tobytes())
 
             # マテリアルの設定

@@ -2,6 +2,7 @@
 
 import numpy as np
 from pyrr import matrix44
+from numpy.typing import NDArray
 
 class Camera:
     def __init__(self, fx, fy, cx, cy, R=np.eye(3), t=np.zeros((3, 1))):
@@ -29,6 +30,12 @@ class Camera:
         # 外部パラメータの設定
         self.R = R
         self.t = t
+        
+        self._view_matrix = self._create_look_at(
+            position=np.array([0, 0, 0]),
+            target=np.array([0, 0, 1]),
+            up=np.array([0, 1, 0])
+        )
         
     def compute_projection_matrix(self, width, height, near=1, far=1000):
         """
@@ -60,6 +67,31 @@ class Camera:
             't': self.t.tolist()
 
         }
+    
+    def _create_look_at(
+        self,
+        position: NDArray[np.float32],
+        target: NDArray[np.float32],
+        up: NDArray[np.float32]
+    ):
+        """
+        カメラのビュー行列を計算
+        
+        Parameters:
+        -----------
+        position : ndarray, shape (3,)
+            カメラの位置
+        target : ndarray, shape (3,)
+            カメラの注視点
+        up : ndarray, shape (3,)
+            カメラの上方向
+        """
+        return matrix44.create_look_at(
+            position,
+            target,
+            up,
+            dtype=np.float32
+        )
 
 def cal_fov(focal_length, sensor_size):
     """

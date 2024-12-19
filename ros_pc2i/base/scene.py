@@ -9,7 +9,6 @@ class Scene:
     def __init__(self):
         self.meshes: Dict[str, Mesh] = {}
         self.light_position = Vector3([0.0, 0.0, 0.0])
-        self.ambient_light = Vector3([0.1, 0.1, 0.1])
 
     def add_mesh(self, mesh: Mesh):
         self.meshes[mesh.name] = mesh
