@@ -4,7 +4,9 @@ from pathlib import Path
 import numpy as np
 import yaml
 from pyrr import Vector3, Matrix44
+from numpy.typing import NDArray
 
+from ros_pc2i.base.material import Material
 from ros_pc2i.base.mesh import load_stl
 from ros_pc2i.base.renderer import Renderer
 from ros_pc2i.base.camera import Camera
@@ -62,34 +64,63 @@ class StereoSystem:
             yaml.dump(left_cam_params, f)
         with open(save_dir / "right_camera.yaml", "w") as f:
             yaml.dump(right_cam_params, f)
-        
+
+def capture_image(
+    mesh_path: Path,
+    outdir: Path = "out",
+    width: int = 800,
+    height: int = 600,
+    mesh_position: NDArray = np.array([0, 0, 200]),
+    mesh_rotation: NDArray = np.array([np.pi/8, 0, np.pi/4]),
+    mesh_material: Material = Metal(),
+    cam_baseline: int = 50
+):
+    """
+    ステレオ画像の撮影
+
+    Parameters:
+    -----------
+    mesh_path : Path
+        STLファイルのパス
+    outdir : Path
+        画像の保存先ディレクトリ
+    width : int
+        画像の幅
+    height : int
+        画像の高さ
+    mesh_position : NDArray
+        メッシュの位置(x, y, z)
+    mesh_rotation : NDArray
+        メッシュの回転角度(x, y, z)
+    mesh_material : Material
+        メッシュのマテリアル
+    cam_baseline : int
+        カメラのベースライン(視差)[mm]
+    """
+    renderer = Renderer(width, height, headless=True)
+    scene = Scene()
+
+    # STLファイルの読み込み
+    mesh = load_stl(renderer.ctx, mesh_path)
+    mesh.transform.position = Vector3(mesh_position)
+    mesh.transform.rotation = Vector3(mesh_rotation)
+    mesh.material = mesh_material
+    scene.add_mesh(mesh)
+
+    left_cam = Camera(fx=800, fy=600, cx=0, cy=0)
+    right_cam = Camera(fx=800, fy=600, cx=-baseline, cy=0, R=np.eye(3), t=np.array([[cam_baseline], [0], [0]]))
+    system = StereoSystem(left_camera=left_cam, right_camera=right_cam)
+
+    save_dir = outdir
+    system.capture_stereo_images(renderer, scene, save_dir=save_dir)
+
 # 使用例
 if __name__ == "__main__":
     width = 800
     height = 600
-    
-    renderer = Renderer(width, height, headless=True)
-    scene = Scene()
-    
-    # STLファイルの読み込み
+
     mesh_path = Path(__file__).parent.parent / "data" / "hole.stl"
-    mesh = load_stl(renderer.ctx, mesh_path)
-    mesh.transform.position = Vector3([0, 0, 200])
-
-    # 球体メッシュを作成
-    # mesh = Sphere(renderer.ctx, radius=100)
-    # mesh.transform.position = Vector3([0, 0, 800])
-    mesh.transform.rotation = Vector3([np.pi/8, 0, np.pi/4]) #45度回転
-    mesh.material = Metal()
-    scene.add_mesh(mesh)
-
-    # カメラパラメータの設定
     baseline = 50
-    left_cam = Camera(fx=800, fy=600, cx=0, cy=0)
-    right_cam = Camera(fx=800, fy=600, cx=-baseline, cy=0, R=np.eye(3), t=np.array([[baseline], [0], [0]])) # ベースラインを50に設定
-    system = StereoSystem(left_camera=left_cam, right_camera=right_cam)
-    # ステレオ画像の撮影と保存
-    save_dir = "out"
-    system.capture_stereo_images(renderer, scene, save_dir=save_dir)
 
+    capture_image(mesh_path, width=width, height=height, cam_baseline=baseline)
     print("Stereo images captured")
